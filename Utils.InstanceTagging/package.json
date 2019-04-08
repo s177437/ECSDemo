@@ -1,0 +1,11 @@
+{
+  "name": "utils.instancetagging",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {
+    "serverless-python-requirements": "^4.2.5"
+  },
+  "author": "",
+  "license": "ISC"
+}

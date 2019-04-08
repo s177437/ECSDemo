@@ -1,0 +1,4 @@
+---
+dev:
+  aws_tag_key: Owner
+  aws_tag_value: Stian
