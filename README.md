@@ -1,4 +1,4 @@
-# AWSFargateDemo
+# ECSDemo
 
 This repository contains a three part setup for provisioning an infrastructure with ability to run a simple HelloWorld application with the use of AWS ECS/Fargate. 
 The repository contains three subrepos: 
