@@ -13,4 +13,4 @@ desired_count: 2
 container_cpu: 256
 container_memory: 512
 container_port: 80
-docker_image_url: 801357027545.dkr.ecr.eu-west-1.amazonaws.com/utils.helloworld
+docker_image_url: stianstrom/utils.helloworld
