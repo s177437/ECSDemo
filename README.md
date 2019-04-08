@@ -84,4 +84,3 @@ You can run the thing by issuing
 ```bash
 python test.py
 ```
-To run locally, boto3 must be installed. This can be installed with the provided pipfile. 
