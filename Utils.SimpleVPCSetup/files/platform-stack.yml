@@ -1,0 +1,200 @@
+Parameters: 
+  VpcName:
+    Type: String
+  Owner: 
+    Type: String
+    Description: Owner tag indicating the resource owner. 
+Resources: 
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties: 
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags: 
+        - Key: Name
+          Value: !Ref VpcName
+        - Key: Owner
+          Value: !Ref Owner
+  
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    DependsOn: VPC
+    Properties: 
+      Tags:
+        - Key: Owner
+          Value: !Ref Owner
+    
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      MapPublicIpOnLaunch: true 
+      CidrBlock: 10.0.10.0/24
+      AvailabilityZone: eu-west-1a 
+      Tags:
+        - Key: Owner
+          Value: !Ref Owner
+
+
+  PublicSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      MapPublicIpOnLaunch: true
+      CidrBlock: 10.0.11.0/24
+      AvailabilityZone: eu-west-1b
+      Tags:
+        - Key: Owner
+          Value: !Ref Owner
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref 'VPC'
+      Tags:
+        - Key: Owner
+          Value: !Ref Owner
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref 'PublicRouteTable'
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref 'InternetGateway'
+
+
+  PublicSubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetA
+      RouteTableId: !Ref PublicRouteTable
+
+
+  PublicSubnetBRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetB
+      RouteTableId: !Ref PublicRouteTable
+
+
+  ContainerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Access to the Fargate containers
+      VpcId: !Ref 'VPC'
+      Tags:
+        - Key: Owner
+          Value: !Ref Owner
+
+
+  EcsSecurityGroupIngressFromPublicALB:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref ContainerSecurityGroup
+      Description: Ingress from the public ALB
+      IpProtocol: -1
+      SourceSecurityGroupId: !Ref 'PublicLoadBalancerSecurityGroup'
+      Tags:
+        - Key: Owner
+          Value: !Ref Owner
+
+  PublicLoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Access to the public facing load balancer
+      VpcId:
+        Ref: VPC
+      SecurityGroupIngress:
+          - CidrIp: 0.0.0.0/0
+            IpProtocol: -1
+      Tags:
+        - Key: Owner
+          Value: !Ref Owner
+
+  PublicLoadBalancer:
+      Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+      Properties:
+        Scheme: internet-facing
+        LoadBalancerAttributes:
+        - Key: idle_timeout.timeout_seconds
+          Value: '30'
+        Subnets:
+          - !Ref PublicSubnetA
+          - !Ref PublicSubnetB
+        SecurityGroups: [!Ref 'PublicLoadBalancerSecurityGroup']
+        Tags:
+        - Key: Owner
+          Value: !Ref Owner
+  
+  DummyTargetGroupPublic:
+      Type: AWS::ElasticLoadBalancingV2::TargetGroup
+      Properties:
+        HealthCheckIntervalSeconds: 6
+        HealthCheckPath: /
+        HealthCheckProtocol: HTTP
+        HealthCheckTimeoutSeconds: 5
+        HealthyThresholdCount: 2
+        Port: 80
+        Protocol: HTTP
+        UnhealthyThresholdCount: 2
+        VpcId:
+          Ref: VPC
+        Tags:
+          - Key: Owner
+            Value: !Ref Owner
+    
+  PublicLoadBalancerListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    DependsOn:
+      - PublicLoadBalancer
+    Properties:
+      DefaultActions:
+        - TargetGroupArn: !Ref 'DummyTargetGroupPublic'
+          Type: 'forward'
+      LoadBalancerArn: !Ref 'PublicLoadBalancer'
+      Port: 80
+      Protocol: HTTP
+
+Outputs: 
+  PublicSubnetA: 
+    Description: Id for subnet running in availability sone eu-west-1a
+    Value: !Ref PublicSubnetA
+    Export: 
+      Name: 
+        Fn::Sub: "${AWS::StackName}-PublicSubnetA"
+    
+  PublicSubnetB: 
+    Description: Id for subnet running in availability sone eu-west-1b
+    Value: !Ref PublicSubnetB
+    Export: 
+      Name: 
+        Fn::Sub: "${AWS::StackName}-PublicSubnetB"
+
+  VPC: 
+    Description: VPC id 
+    Value: !Ref VPC
+    Export: 
+      Name: 
+        Fn::Sub: "${AWS::StackName}-VPCID"
+
+  PublicLoadBalancerListener: 
+    Description: Public Loadbalancer Listener  
+    Value: !Ref PublicLoadBalancerListener
+    Export: 
+      Name: 
+        Fn::Sub: "${AWS::StackName}-PublicLoadBalancerListenerId"
+
+  ContainerSecurityGroup: 
+    Description: ContainerSecurityGroup used for accessing ECS containers 
+    Value: !Ref ContainerSecurityGroup
+    Export: 
+      Name: 
+        Fn::Sub: "${AWS::StackName}-ContainerSecurityGroup"

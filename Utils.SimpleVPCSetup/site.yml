@@ -1,0 +1,22 @@
+---
+- name: Configure AWS setup
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: load variables from config file
+      include_vars:
+        file: ../config/config.yml
+      no_log: false
+
+    - name: Update cloudformation stack
+      cloudformation:
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
+        stack_name: "{{ vpc_stack_name }}"
+        state: "present"
+        region: "eu-west-1"
+        template: "files/platform-stack.yml"
+        template_parameters:
+          VpcName: "{{ vpc_name }}"
+          Owner: {{ aws_owner_tag }}
+      no_log: false 
