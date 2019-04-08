@@ -1,0 +1,123 @@
+Parameters: 
+  PlatformStackName: 
+    Type: String
+    Description: Name of stack CFN containing VPC setup for loadbalancer
+  ServiceName: 
+    Type: String
+  DesiredCount: 
+    Type: Number
+  ContainerCPU:
+    Type: Number
+  ContainerMemory: 
+    Type: Number
+  ContainerPort: 
+    Type: Number
+  ImageUrl: 
+    Type: String
+  Owner: 
+    Type: String
+Resources: 
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+
+  TaskDefinition:
+      Type: AWS::ECS::TaskDefinition
+      Properties:
+        Family: !Ref 'ServiceName'
+        Cpu: !Ref ContainerCPU
+        Memory: !Ref ContainerMemory
+        NetworkMode: awsvpc
+        RequiresCompatibilities:
+          - FARGATE
+        ExecutionRoleArn:
+          !Ref ECSTaskExecutionRole
+        ContainerDefinitions:
+          - Name: !Ref ServiceName
+            Cpu: !Ref ContainerCPU
+            Memory: !Ref ContainerMemory 
+            Image: !Ref ImageUrl
+            PortMappings:
+              - ContainerPort: !Ref ContainerPort
+ 
+  Service:
+    Type: AWS::ECS::Service
+    DependsOn: LoadBalancerRule
+    Properties:
+      ServiceName: !Ref 'ServiceName'
+      Cluster: !Ref ECSCluster
+      LaunchType: FARGATE
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 75
+      DesiredCount: !Ref DesiredCount
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          SecurityGroups:
+            - Fn::ImportValue: !Sub ${PlatformStackName}-ContainerSecurityGroup
+          Subnets:
+            - Fn::ImportValue: !Sub ${PlatformStackName}-PublicSubnetA
+            - Fn::ImportValue: !Sub ${PlatformStackName}-PublicSubnetB
+      TaskDefinition: !Ref 'TaskDefinition'
+      LoadBalancers:
+        - ContainerName: !Ref ServiceName
+          ContainerPort: !Ref ContainerPort
+          TargetGroupArn: !Ref TargetGroup
+  
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 6
+      HealthCheckPath: /
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      TargetType: ip
+      Name: !Ref ServiceName
+      Port: !Ref ContainerPort
+      Protocol: HTTP
+      UnhealthyThresholdCount: 2
+      VpcId: 
+        Fn::ImportValue: !Sub ${PlatformStackName}-VPCID
+      Tags:
+        - Key: Owner
+          Value: !Ref Owner   
+      
+
+  LoadBalancerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+        - TargetGroupArn: !Ref 'TargetGroup'
+          Type: 'forward'
+      Conditions:
+        - Field: path-pattern
+          Values: ["*"]
+      ListenerArn: 
+        Fn::ImportValue: !Sub ${PlatformStackName}-PublicLoadBalancerListenerId
+      Priority: 1
+
+  ECSTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ecs-tasks.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      Policies:
+        - PolicyName: AmazonECSTaskExecutionRolePolicy
+          PolicyDocument:
+            Statement:
+            - Effect: Allow
+              Action:
+                - 'ecr:GetAuthorizationToken'
+                - 'ecr:BatchCheckLayerAvailability'
+                - 'ecr:GetDownloadUrlForLayer'
+                - 'ecr:BatchGetImage'
+                - 'logs:CreateLogStream'
+                - 'logs:PutLogEvents'
+              Resource: '*'
+

@@ -1,0 +1,28 @@
+---
+- name: Configure AWS setup
+  hosts: localhost
+  gather_facts: false
+  tasks:
+
+    - name: load variables from config
+      include_vars:
+        file: ../config/config.yml
+
+    - name: Update cloudformation stack
+      cloudformation:
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
+        stack_name: "Utils-HelloWorld"
+        state: "present"
+        region: "eu-west-1"
+        template: "files/container-service.yml"
+        template_parameters:
+          PlatformStackName: "{{ vpc_stack_name }}"
+          ServiceName : "{{ service_name }}"
+          DesiredCount: "{{ desired_count }}"
+          ContainerCPU: "{{ container_cpu }}"
+          ContainerMemory: "{{ container_memory }}"
+          ContainerPort: "{{ container_port }}"
+          ImageUrl: "{{ docker_image_url }}"
+          Owner: "{{ aws_owner_tag }}"
+      no_log: false
