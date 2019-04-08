@@ -5,7 +5,9 @@ The repository contains three subrepos:
  1. **Utils.SimpleVPCSetup** - Basic CloudFormation infrastructure setup for configuring a VPC with a loadbalancer setup. This infrastructure must be running before continuing deploying the sub-projects below.
  2. **Utils.HelloWorld** - CloudFormation setup + Dockerfile for running a small Flask based HelloWorld REST API in a AWS ECS container.
  3. **Utils.InstanceTagging** - Simple AWS Lambda that can be deployed with the use of the serverless framework. The lambda is currently configured to tag specific AWS resources with a global tag.
- 
+
+### Simple infrastructure diagram
+![alt text](diagram/infrastructure_diagram.png "HelloWorld infrastructure overview")
 
 ### System prerequisites 
 #### Ansible Setup
