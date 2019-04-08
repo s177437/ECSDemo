@@ -1,0 +1,3 @@
+config/config.yml
+Utils.InstanceTagging/.serverless/
+Utils.InstanceTagging/node_modules
