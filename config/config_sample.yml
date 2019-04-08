@@ -4,8 +4,8 @@ aws_access_key: replaced_by_user
 aws_secret_key: replaced_by_user
 
 #Platform CFN stack config
-vpc_stack_name: "Utils-SimpleVPC-Setup" 
-vpc_name: "PublicVPC"
+vpc_stack_name: Utils-SimpleVPC-Setup
+vpc_name: PublicVPC
 
 #ECS stack config
 ecs_stack_name: "Utils-HelloWorld" 
