@@ -18,5 +18,5 @@
         template: "files/platform-stack.yml"
         template_parameters:
           VpcName: "{{ vpc_name }}"
-          Owner: {{ aws_owner_tag }}
+          Owner: "{{ aws_owner_tag }}"
       no_log: false 
